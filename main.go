@@ -197,7 +197,9 @@ func DeleteProduct(db *gorm.DB) func(*gin.Context) {
 			return
 		}
 
-		if err := db.Table(Product{}.TableName()).Where("id = ?", id).Delete(&Product{}).Error; err != nil {
+		if err := db.Table(Product{}.TableName()).Where("id = ?", id).Updates(map[string]interface{}{
+			"status": "Out of Stock",
+		}).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": ok.Error(),
 			})
@@ -227,7 +229,7 @@ func GetListProduct(db *gorm.DB) func(*gin.Context) {
 
 		var data []Product
 
-		if err := db.Table(Product{}.TableName()).Count(&paging.Total).Error; err != nil {
+		if err := db.Table(Product{}.TableName()).Select("id").Count(&paging.Total).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
@@ -235,7 +237,9 @@ func GetListProduct(db *gorm.DB) func(*gin.Context) {
 			return
 		}
 
-		if err := db.Table(Product{}.TableName()).Offset((paging.Page - 1) * paging.Limit).Limit(paging.Limit).Find(&data).Error; err != nil {
+		if err := db.Table(Product{}.TableName()).
+			Offset((paging.Page - 1) * paging.Limit).
+			Limit(paging.Limit).Find(&data).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
