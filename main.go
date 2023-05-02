@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -55,7 +56,7 @@ func main() {
 		products := v1.Group("/products")
 		{
 			products.GET("")
-			products.GET("/:id")
+			products.GET("/:id", GetProductById(db))
 			products.POST("", CreateProduct(db))
 			products.PATCH("/:id")
 			products.DELETE("/:id")
@@ -89,6 +90,34 @@ func CreateProduct(db *gorm.DB) func(*gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{
 			"data": data.Id,
+		})
+	}
+}
+
+func GetProductById(db *gorm.DB) func(*gin.Context) {
+	return func(c *gin.Context) {
+		id, ok := strconv.Atoi(c.Param("id"))
+
+		if ok != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": ok.Error(),
+			})
+
+			return
+		}
+
+		var data Product
+
+		if err := db.Where("id = ?", id).Find(&data).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": data,
 		})
 	}
 }
