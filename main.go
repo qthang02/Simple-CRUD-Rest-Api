@@ -70,7 +70,7 @@ func main() {
 			products.GET("/:id", GetProductById(db))
 			products.POST("", CreateProduct(db))
 			products.PATCH("/:id", UpdateProduct(db))
-			products.DELETE("/:id")
+			products.DELETE("/:id", DeleteProduct(db))
 		}
 	}
 
@@ -158,6 +158,32 @@ func UpdateProduct(db *gorm.DB) func(*gin.Context) {
 		if err := db.Where("id = ?", id).Updates(&data).Error; err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data": true,
+		})
+	}
+}
+
+func DeleteProduct(db *gorm.DB) func(*gin.Context) {
+	return func(c *gin.Context) {
+		id, ok := strconv.Atoi(c.Param("id"))
+
+		if ok != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": ok.Error(),
+			})
+
+			return
+		}
+
+		if err := db.Table(Product{}.TableName()).Where("id = ?", id).Delete(&Product{}).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": ok.Error(),
 			})
 
 			return
