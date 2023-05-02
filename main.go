@@ -49,6 +49,22 @@ func (ProductUpdate) TableName() string {
 	return Product{}.TableName()
 }
 
+type Paging struct {
+	Page  int   `json:"page" form:"page"`
+	Limit int   `json:"limit" form:"limit"`
+	Total int64 `json:"total" form:"-"`
+}
+
+func (p *Paging) Process() {
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+
+	if p.Limit <= 0 || p.Limit > 100 {
+		p.Limit = 10
+	}
+}
+
 func main() {
 
 	dsn := os.Getenv("DB_CONN")
@@ -66,7 +82,7 @@ func main() {
 	{
 		products := v1.Group("/products")
 		{
-			products.GET("")
+			products.GET("", GetListProduct(db))
 			products.GET("/:id", GetProductById(db))
 			products.POST("", CreateProduct(db))
 			products.PATCH("/:id", UpdateProduct(db))
@@ -191,6 +207,45 @@ func DeleteProduct(db *gorm.DB) func(*gin.Context) {
 
 		c.JSON(http.StatusOK, gin.H{
 			"data": true,
+		})
+	}
+}
+
+func GetListProduct(db *gorm.DB) func(*gin.Context) {
+	return func(c *gin.Context) {
+		var paging Paging
+
+		if err := c.ShouldBind(&paging); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+
+			return
+		}
+
+		paging.Process()
+
+		var data []Product
+
+		if err := db.Table(Product{}.TableName()).Count(&paging.Total).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+
+			return
+		}
+
+		if err := db.Table(Product{}.TableName()).Offset((paging.Page - 1) * paging.Limit).Limit(paging.Limit).Find(&data).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"data":   data,
+			"paging": paging,
 		})
 	}
 }
